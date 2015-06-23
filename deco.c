@@ -246,15 +246,16 @@ void vpmb_next_gradient(double deco_time)
 	double gradient_n2, gradient_he;
 	double n2_b, n2_c;
 	double he_b, he_c;
+	deco_time = deco_time /60.0 ;
 	
 	for (ci = 0; ci < 16; ++ci) {
-		n2_b = allowable_n2_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0/ LOG_2))); // Maybe /60.0???
-		he_b = allowable_he_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0/ LOG_2)));
+		n2_b = allowable_n2_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0 / LOG_2))); 
+		he_b = allowable_he_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0 / LOG_2)));
 		
 		n2_c = vpmb_config.surface_tension_gamma * vpmb_config.surface_tension_gamma * vpmb_config.crit_volume_lambda * max_n2_crushing_pressure[ci];
-		n2_c = n2_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0/ LOG_2));
+		n2_c = n2_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0 / LOG_2));
 		he_c = vpmb_config.surface_tension_gamma * vpmb_config.surface_tension_gamma * vpmb_config.crit_volume_lambda * max_he_crushing_pressure[ci];
-		he_c = he_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0/ LOG_2));
+		he_c = he_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0 / LOG_2));
 		
 		allowable_n2_gradient[ci] = 0.5 * ( n2_b + sqrt(n2_b * n2_b - 4.0 * n2_c));
 		allowable_he_gradient[ci] = 0.5 * ( he_b + sqrt(he_b * he_b - 4.0 * he_c));
