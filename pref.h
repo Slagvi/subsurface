@@ -24,6 +24,12 @@ typedef struct {
 	char *album_id;
 } facebook_prefs_t;
 
+enum deco_mode {
+	BUEHLMANN,
+	RECREATIONAL,
+	VPMB
+};
+
 struct preferences {
 	const char *divelist_font;
 	const char *default_filename;
@@ -79,7 +85,6 @@ struct preferences {
 	bool display_runtime;
 	bool display_duration;
 	bool display_transitions;
-	bool recreational_mode;
 	bool safetystop;
 	int reserve_gas;
 	int bottomsac;
@@ -93,6 +98,7 @@ struct preferences {
 	char *passphrase;
 	char *remote_storage_email;
 	bool save_PIN_local;
+	enum deco_mode deco_mode;
 };
 enum unit_system_values {
 	METRIC,

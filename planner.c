@@ -815,7 +815,7 @@ void track_ascent_gas(int depth, cylinder_t *cylinder, int avg_depth, int bottom
 	}
 }
 
-bool trial_ascent(int trial_depth, int stoplevel, int avg_depth, int bottom_time, double tissue_tolerance, struct gasmix *gasmix, int po2, double surface_pressure, bool is_vpmb)
+bool trial_ascent(int trial_depth, int stoplevel, int avg_depth, int bottom_time, double tissue_tolerance, struct gasmix *gasmix, int po2, double surface_pressure)
 {
 
 	bool clear_to_ascend = true;
@@ -829,12 +829,12 @@ bool trial_ascent(int trial_depth, int stoplevel, int avg_depth, int bottom_time
 		tissue_tolerance = add_segment(depth_to_mbar(trial_depth, &displayed_dive) / 1000.0,
 					       gasmix,
 					       TIMESTEP, po2, &displayed_dive, prefs.decosac);
-		if ((!is_vpmb) && deco_allowed_depth(tissue_tolerance, surface_pressure, &displayed_dive, 1) > trial_depth - deltad) {
+		if (prefs.deco_mode != VPMB && deco_allowed_depth(tissue_tolerance, surface_pressure, &displayed_dive, 1) > trial_depth - deltad) {
 			/* We should have stopped */
 			clear_to_ascend = false;
 			break;
 		}
-		if (is_vpmb && (!is_vpmb_ok(depth_to_mbar(trial_depth, &displayed_dive) / 1000.0))){
+		if (prefs.deco_mode == VPMB && (!is_vpmb_ok(depth_to_mbar(trial_depth, &displayed_dive) / 1000.0))){
 			clear_to_ascend = false;
 			break;
 		}
@@ -859,13 +859,13 @@ bool enough_gas(int current_cylinder)
 
 // Work out the stops. Return value is if there were any mandatory stops.
 
-bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool show_disclaimer, bool is_vpmb)
+bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool show_disclaimer)
 {
 	int bottom_depth;
 	int bottom_gi;
 	int bottom_stopidx;
 
-	bool is_final_plan = !is_vpmb;
+	bool is_final_plan = prefs.deco_mode != VPMB;
 	int deco_time;
 	int previous_deco_time;
 	char *bottom_cache = NULL;
@@ -962,12 +962,12 @@ bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool 
 	bottom_time = clock = previous_point_time = displayed_dive.dc.sample[displayed_dive.dc.samples - 1].time.seconds;
 	gi = gaschangenr - 1;
 	
-	if(prefs.recreational_mode) {
+	if(prefs.deco_mode == RECREATIONAL) {
 		bool safety_stop = prefs.safetystop && max_depth >= 10000;
 		track_ascent_gas(depth, &displayed_dive.cylinder[current_cylinder], avg_depth, bottom_time, safety_stop);
 		// How long can we stay at the current depth and still directly ascent to the surface?
 		while (trial_ascent(depth, 0, avg_depth, bottom_time, tissue_tolerance, &displayed_dive.cylinder[current_cylinder].gasmix,
-				  po2, diveplan->surface_pressure / 1000.0, is_vpmb) &&
+				  po2, diveplan->surface_pressure / 1000.0) &&
 		       enough_gas(current_cylinder)) {
 			tissue_tolerance = add_segment(depth_to_mbar(depth, &displayed_dive) / 1000.0,
 						       &displayed_dive.cylinder[current_cylinder].gasmix,
@@ -1107,7 +1107,7 @@ bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool 
 			while (1) {
 				/* Check if ascending to next stop is clear, go back and wait if we hit the ceiling on the way */
 				if (trial_ascent(depth, stoplevels[stopidx], avg_depth, bottom_time, tissue_tolerance,
-						&displayed_dive.cylinder[current_cylinder].gasmix, po2, diveplan->surface_pressure / 1000.0, is_vpmb))
+						&displayed_dive.cylinder[current_cylinder].gasmix, po2, diveplan->surface_pressure / 1000.0))
 					break; /* We did not hit the ceiling */
 
 				/* Add a minute of deco time and then try again */
