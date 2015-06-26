@@ -873,7 +873,7 @@ bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool 
 	int bottom_gi;
 	int bottom_stopidx;
 
-	bool is_final_plan = prefs.deco_mode != VPMB;
+	bool is_final_plan = true;
 	int deco_time;
 	int previous_deco_time;
 	char *bottom_cache = NULL;
@@ -900,8 +900,7 @@ bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool 
 	int breakcylinder = 0;
 	int error = 0;
 	bool decodive = false;
-	
-	clear_vpmb();
+
 	set_gf(diveplan->gflow, diveplan->gfhigh, prefs.gf_low_at_maxdepth);
 	if (!diveplan->surface_pressure)
 		diveplan->surface_pressure = SURFACE_PRESSURE;
@@ -970,7 +969,7 @@ bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool 
 	/* Keep time during the ascend */
 	bottom_time = clock = previous_point_time = displayed_dive.dc.sample[displayed_dive.dc.samples - 1].time.seconds;
 	gi = gaschangenr - 1;
-	
+
 	if(prefs.deco_mode == RECREATIONAL) {
 		bool safety_stop = prefs.safetystop && max_depth >= 10000;
 		track_ascent_gas(depth, &displayed_dive.cylinder[current_cylinder], avg_depth, bottom_time, safety_stop);
@@ -1034,8 +1033,8 @@ bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool 
 #endif
 	}
 
-	// VPM-B Deco
-	nuclear_regeneration(clock / 60.0);
+	// VPM-B or Buehlmann Deco
+	nuclear_regeneration(clock);
 	vpmb_start_gradient(); 
 	previous_deco_time = 100000000;
 	deco_time = 10000000;
@@ -1046,7 +1045,7 @@ bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool 
 	bottom_stopidx = stopidx;
 	//CVA
 	do {
-		is_final_plan = (previous_deco_time - deco_time) < 10;	// CVA time converges
+		is_final_plan = (prefs.deco_mode == BUEHLMANN) || (previous_deco_time - deco_time < 10);	// CVA time converges
 		previous_deco_time = deco_time;
 		restore_deco_state(bottom_cache);
 
@@ -1065,8 +1064,7 @@ bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool 
 			report_error(translate("gettextFromC", "Can't find gas %s"), gasname(&gas));
 			current_cylinder = 0;
 		}
-		if (deco_time != 10000000)
-				vpmb_next_gradient(deco_time);
+		vpmb_next_gradient(deco_time);
 
 		while (1) {
 			/* We will break out when we hit the surface */
@@ -1209,11 +1207,10 @@ bool plan(struct diveplan *diveplan, char **cached_datap, bool is_planner, bool 
 				stopping = false;
 			}
 		}
-		
+
 		deco_time = clock - bottom_time;
-		printf("Deco time: %d \n", deco_time);
 	} while (!is_final_plan);
-	
+
 	plan_add_segment(diveplan, clock - previous_point_time, 0, gas, po2, false);
 	create_dive_from_plan(diveplan, is_planner);
 	add_plan_to_notes(diveplan, &displayed_dive, show_disclaimer, error);

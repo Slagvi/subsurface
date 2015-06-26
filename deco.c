@@ -88,7 +88,7 @@ const double buehlmann_He_factor_expositon_one_second[] = {
 	2.80360036664540E-004, 2.09299583354805E-004, 1.63410794820518E-004, 1.27869320250551E-004,
 	1.00198406028040E-004, 7.83611475491108E-005, 6.13689891868496E-005, 4.81280465299827E-005
 };
-#define LOG_2 0.69314718055994
+
 #define WV_PRESSURE 0.0627 // water vapor pressure in bar
 #define DECO_STOPS_MULTIPLIER_MM 3000.0
 
@@ -216,7 +216,7 @@ bool is_vpmb_ok(double pressure)
 	int ci;
 	double gradient;
 	double gas_tension;
-	
+
 	for (ci = 0; ci < 16; ++ci) {
 		gas_tension = tissue_n2_sat[ci] + tissue_he_sat[ci] + vpmb_config.other_gases_pressure;
 		gradient = gas_tension - pressure;
@@ -230,12 +230,11 @@ void vpmb_start_gradient()
 {
 	int ci;
 	double gradient_n2, gradient_he;
-	
+
 	for (ci = 0; ci < 16; ++ci) {
 		allowable_n2_gradient[ci] = 2.0 * (vpmb_config.surface_tension_gamma / vpmb_config.skin_compression_gammaC) * ((vpmb_config.skin_compression_gammaC - vpmb_config.surface_tension_gamma) / n2_regen_radius[ci]) ;//* time;
 		allowable_he_gradient[ci] = 2.0 * (vpmb_config.surface_tension_gamma / vpmb_config.skin_compression_gammaC) * ((vpmb_config.skin_compression_gammaC - vpmb_config.surface_tension_gamma) / he_regen_radius[ci]) ;//* time;
-		//printf ("  tension %d: he: %lf n2: %lf crushing_he: %lf crushing_n2: %lf max_ambient: %lf radius: %lf  n2Gradient: %lf heGradient: %lf\n",ci , tissue_he_sat[ci], tissue_n2_sat[ci], max_he_crushing_pressure[ci], max_n2_crushing_pressure[ci], max_ambient_pressure, n2_regen_radius[ci],
-		//	allowable_n2_gradient[ci], allowable_he_gradient[ci]);
+
 		total_gradient[ci] = ((allowable_n2_gradient[ci] * tissue_n2_sat[ci]) + (allowable_he_gradient[ci] * tissue_he_sat[ci])) / (tissue_n2_sat[ci] + tissue_he_sat[ci]);
 	}
 }
@@ -246,29 +245,27 @@ void vpmb_next_gradient(double deco_time)
 	double gradient_n2, gradient_he;
 	double n2_b, n2_c;
 	double he_b, he_c;
-	deco_time = deco_time /60.0 ;
-	
+	deco_time /= 60.0 ;
+
 	for (ci = 0; ci < 16; ++ci) {
-		n2_b = allowable_n2_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0 / LOG_2))); 
-		he_b = allowable_he_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0 / LOG_2)));
-		
+		n2_b = allowable_n2_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0 / log(2.0)))); 
+		he_b = allowable_he_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0 / log(2.0))));
+
 		n2_c = vpmb_config.surface_tension_gamma * vpmb_config.surface_tension_gamma * vpmb_config.crit_volume_lambda * max_n2_crushing_pressure[ci];
-		n2_c = n2_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0 / LOG_2));
+		n2_c = n2_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0 / log(2.0)));
 		he_c = vpmb_config.surface_tension_gamma * vpmb_config.surface_tension_gamma * vpmb_config.crit_volume_lambda * max_he_crushing_pressure[ci];
-		he_c = he_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0 / LOG_2));
-		
+		he_c = he_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0 / log(2.0)));
+
 		allowable_n2_gradient[ci] = 0.5 * ( n2_b + sqrt(n2_b * n2_b - 4.0 * n2_c));
 		allowable_he_gradient[ci] = 0.5 * ( he_b + sqrt(he_b * he_b - 4.0 * he_c));
-		//printf ("  tension %d: he: %lf n2: %lf crushing_he: %lf crushing_n2: %lf max_ambient: %lf radius: %lf  n2Gradient: %lf heGradient: %lf\n",ci , tissue_he_sat[ci], tissue_n2_sat[ci], max_he_crushing_pressure[ci], max_n2_crushing_pressure[ci], max_ambient_pressure, n2_regen_radius[ci],
-		//	allowable_n2_gradient[ci], allowable_he_gradient[ci]);
-		
+
 		total_gradient[ci] = ((allowable_n2_gradient[ci] * tissue_n2_sat[ci]) + (allowable_he_gradient[ci] * tissue_he_sat[ci])) / (tissue_n2_sat[ci] + tissue_he_sat[ci]);
 	}
 }
 
 void nuclear_regeneration(double time)
 {
-	// original code scales crushing pressure for some reason... cannot find any motive for this
+	time /= 60.0;
 	int ci;
 	double crushing_radius_N2, crushing_radius_He;
 	for (ci = 0; ci < 16; ++ci) {
@@ -289,29 +286,26 @@ double calc_inner_pressure(double crit_radius, double onset_tension, double curr
 	double A, B, C, low_bound, high_bound, root;
 	double valH, valL;
 	int ci;
-	// Probably will be removed later...
 	const int max_iters = 10;
-	
+
 	// const, depends only on config.
 	onset_radius = 1.0 / (vpmb_config.gradient_of_imperm / (2.0 * (vpmb_config.skin_compression_gammaC - vpmb_config.surface_tension_gamma)) + 1.0 / crit_radius);
-	
+
 	// A*r^3 + B*r^2 + C = 0
 	A = current_ambient_pressure - vpmb_config.gradient_of_imperm + (2.0 * (vpmb_config.skin_compression_gammaC - vpmb_config.surface_tension_gamma)) / onset_radius;
 	B = 2.0 * (vpmb_config.skin_compression_gammaC - vpmb_config.surface_tension_gamma);
 	C = onset_tension * pow(onset_radius, 3);
-	
+
 	// According to the algorithm's authors...
 	low_bound = B / A;
 	high_bound = onset_radius;
-	
+
 	valH = high_bound * high_bound * (A * high_bound - B) - C;
 	valL = low_bound * low_bound * (A * low_bound - B) - C;
-	
+
 	for (ci = 0; ci < max_iters; ++ci) {
 		current_radius = (high_bound + low_bound) *0.5;
 		root = (current_radius * current_radius * (A * current_radius - B)) - C;
-		if (root == 0.0)
-			break;
 		if (root >= 0.0)
 			high_bound = current_radius;
 		else
@@ -328,24 +322,22 @@ void calc_crushing_pressure(double pressure)
 	double gas_tension;
 	double n2_crushing_pressure, he_crushing_pressure;
 	double n2_inner_pressure, he_inner_pressure;
-	
+
 	for (ci = 0; ci < 16; ++ci) {
 		gas_tension = tissue_n2_sat[ci] + tissue_he_sat[ci] + vpmb_config.other_gases_pressure;
 		gradient = pressure - gas_tension;
-		
+
 		if (gradient <= vpmb_config.gradient_of_imperm) {	// permeable situation
 			n2_crushing_pressure = he_crushing_pressure = gradient;
-			crushing_onset_tension[ci] = gas_tension; // cannot be max, gas tension decreases after some time
+			crushing_onset_tension[ci] = gas_tension;
 		}
 		else {	//Impermeable
-			// Nothing to do here...
-			if (max_ambient_pressure >= pressure){
+			if (max_ambient_pressure >= pressure)
 				return;
-			}
-			
+
 			n2_inner_pressure = calc_inner_pressure(vpmb_config.crit_radius_N2, crushing_onset_tension[ci], pressure);
 			he_inner_pressure = calc_inner_pressure(vpmb_config.crit_radius_He, crushing_onset_tension[ci], pressure);
-			
+
 			n2_crushing_pressure = pressure - n2_inner_pressure;
 			he_crushing_pressure = pressure - he_inner_pressure;
 		}
@@ -474,12 +466,3 @@ void set_gf(short gflow, short gfhigh, bool gf_low_at_maxdepth)
 	buehlmann_config.gf_low_at_maxdepth = gf_low_at_maxdepth;
 }
 
-void clear_vpmb()
-{
-	int ci;
-	max_ambient_pressure = 0.0;
-	for (ci = 0; ci < 16; ci++) {
-		max_n2_crushing_pressure[ci] = 0.0;
-		max_he_crushing_pressure[ci] = 0.0;
-	}
-}
