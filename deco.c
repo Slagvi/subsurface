@@ -114,6 +114,8 @@ double allowable_n2_gradient[16];
 double allowable_he_gradient[16];
 double total_gradient[16];
 
+double bottom_n2_gradient[16];
+double bottom_he_gradient[16];
 
 static double tissue_tolerance_calc(const struct dive *dive)
 {
@@ -231,8 +233,8 @@ void vpmb_start_gradient()
 	double gradient_n2, gradient_he;
 
 	for (ci = 0; ci < 16; ++ci) {
-		allowable_n2_gradient[ci] = 2.0 * (vpmb_config.surface_tension_gamma / vpmb_config.skin_compression_gammaC) * ((vpmb_config.skin_compression_gammaC - vpmb_config.surface_tension_gamma) / n2_regen_radius[ci]);
-		allowable_he_gradient[ci] = 2.0 * (vpmb_config.surface_tension_gamma / vpmb_config.skin_compression_gammaC) * ((vpmb_config.skin_compression_gammaC - vpmb_config.surface_tension_gamma) / he_regen_radius[ci]);
+		bottom_n2_gradient[ci] = allowable_n2_gradient[ci] = 2.0 * (vpmb_config.surface_tension_gamma / vpmb_config.skin_compression_gammaC) * ((vpmb_config.skin_compression_gammaC - vpmb_config.surface_tension_gamma) / n2_regen_radius[ci]);
+		bottom_he_gradient[ci] = allowable_he_gradient[ci] = 2.0 * (vpmb_config.surface_tension_gamma / vpmb_config.skin_compression_gammaC) * ((vpmb_config.skin_compression_gammaC - vpmb_config.surface_tension_gamma) / he_regen_radius[ci]);
 
 		total_gradient[ci] = ((allowable_n2_gradient[ci] * tissue_n2_sat[ci]) + (allowable_he_gradient[ci] * tissue_he_sat[ci])) / (tissue_n2_sat[ci] + tissue_he_sat[ci]);
 	}
@@ -255,10 +257,41 @@ void vpmb_next_gradient(double deco_time)
 		he_c = vpmb_config.surface_tension_gamma * vpmb_config.surface_tension_gamma * vpmb_config.crit_volume_lambda * max_he_crushing_pressure[ci];
 		he_c = he_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0 / log(2.0)));
 
-		allowable_n2_gradient[ci] = 0.5 * ( n2_b + sqrt(n2_b * n2_b - 4.0 * n2_c));
-		allowable_he_gradient[ci] = 0.5 * ( he_b + sqrt(he_b * he_b - 4.0 * he_c));
+		bottom_n2_gradient[ci] = allowable_n2_gradient[ci] = 0.5 * ( n2_b + sqrt(n2_b * n2_b - 4.0 * n2_c));
+		bottom_he_gradient[ci] = allowable_he_gradient[ci] = 0.5 * ( he_b + sqrt(he_b * he_b - 4.0 * he_c));
 
 		total_gradient[ci] = ((allowable_n2_gradient[ci] * tissue_n2_sat[ci]) + (allowable_he_gradient[ci] * tissue_he_sat[ci])) / (tissue_n2_sat[ci] + tissue_he_sat[ci]);
+	}
+}
+
+double update_gradient(double first_stop_pressure, double next_stop_pressure, double first_gradient)
+{
+	double first_radius = 2.0 * vpmb_config.surface_tension_gamma / first_gradient;
+	double A = next_stop_pressure;
+	double B = -2.0 * vpmb_config.surface_tension_gamma;
+	double C = (first_radius + 2.0 * vpmb_config.surface_tension_gamma /first_radius) * pow(first_radius, 3);
+	double low = first_radius;
+	double high = first_radius * pow(first_stop_pressure / next_stop_pressure, (1.0/3.0));
+	double next_radius;
+	double value;
+	int ci;
+	for (ci = 0; ci < 10; ++ci){
+		next_radius = (high + low) /2.0;
+		value = A * pow(next_radius, 3) - B * next_radius - C;
+		if (value > 0)
+			high = next_radius;
+		else
+			low = next_radius;
+	}
+	return 2.0 * vpmb_config.surface_tension_gamma / next_radius;
+}
+
+void boyles_law(double first_stop_pressure, double next_stop_pressure)
+{
+	int ci;
+	for (ci = 0; ci < 16; ++ci) {
+		allowable_n2_gradient[ci] = update_gradient(first_stop_pressure, next_stop_pressure, bottom_n2_gradient[ci]);
+		allowable_he_gradient[ci] = update_gradient(first_stop_pressure, next_stop_pressure, bottom_he_gradient[ci]);
 	}
 }
 
