@@ -249,8 +249,8 @@ void vpmb_next_gradient(double deco_time)
 	deco_time /= 60.0 ;
 
 	for (ci = 0; ci < 16; ++ci) {
-		n2_b = allowable_n2_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0 / log(2.0))));
-		he_b = allowable_he_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0 / log(2.0))));
+		n2_b = bottom_n2_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0 / log(2.0))));
+		he_b = bottom_he_gradient[ci] + ((vpmb_config.crit_volume_lambda * vpmb_config.surface_tension_gamma) / (vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_He_t_halflife[ci] * 60.0 / log(2.0))));
 
 		n2_c = vpmb_config.surface_tension_gamma * vpmb_config.surface_tension_gamma * vpmb_config.crit_volume_lambda * max_n2_crushing_pressure[ci];
 		n2_c = n2_c / (vpmb_config.skin_compression_gammaC * vpmb_config.skin_compression_gammaC * (deco_time + buehlmann_N2_t_halflife[ci] * 60.0 / log(2.0)));
@@ -266,18 +266,19 @@ void vpmb_next_gradient(double deco_time)
 
 double update_gradient(double first_stop_pressure, double next_stop_pressure, double first_gradient)
 {
-	double first_radius = 2.0 * vpmb_config.surface_tension_gamma / first_gradient;
+	double first_radius = 2.0 * vpmb_config.surface_tension_gamma/ first_gradient;
 	double A = next_stop_pressure;
 	double B = -2.0 * vpmb_config.surface_tension_gamma;
-	double C = (first_radius + 2.0 * vpmb_config.surface_tension_gamma /first_radius) * pow(first_radius, 3);
+	double C = (first_stop_pressure + 2.0 * vpmb_config.surface_tension_gamma / first_radius) * pow(first_radius, 3.0);
+
 	double low = first_radius;
 	double high = first_radius * pow(first_stop_pressure / next_stop_pressure, (1.0/3.0));
 	double next_radius;
 	double value;
 	int ci;
-	for (ci = 0; ci < 10; ++ci){
+	for (ci = 0; ci < 100; ++ci){
 		next_radius = (high + low) /2.0;
-		value = A * pow(next_radius, 3) - B * next_radius - C;
+		value = A * pow(next_radius, 3.0) - B * next_radius * next_radius - C;
 		if (value > 0)
 			high = next_radius;
 		else
@@ -292,6 +293,8 @@ void boyles_law(double first_stop_pressure, double next_stop_pressure)
 	for (ci = 0; ci < 16; ++ci) {
 		allowable_n2_gradient[ci] = update_gradient(first_stop_pressure, next_stop_pressure, bottom_n2_gradient[ci]);
 		allowable_he_gradient[ci] = update_gradient(first_stop_pressure, next_stop_pressure, bottom_he_gradient[ci]);
+
+		total_gradient[ci] = ((allowable_n2_gradient[ci] * tissue_n2_sat[ci]) + (allowable_he_gradient[ci] * tissue_he_sat[ci])) / (tissue_n2_sat[ci] + tissue_he_sat[ci]);
 	}
 }
 
