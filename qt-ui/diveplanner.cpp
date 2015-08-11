@@ -259,6 +259,7 @@ PlannerSettingsWidget::PlannerSettingsWidget(QWidget *parent, Qt::WindowFlags f)
 	prefs.drop_stone_mode = s.value("drop_stone_mode", prefs.drop_stone_mode).toBool();
 	prefs.bottomsac = s.value("bottomsac", prefs.bottomsac).toInt();
 	prefs.decosac = s.value("decosac", prefs.decosac).toInt();
+	prefs.conservatism_level = s.value("conservatism", prefs.conservatism_level).toInt();
 	plannerModel->getDiveplan().bottomsac = prefs.bottomsac;
 	plannerModel->getDiveplan().decosac = prefs.decosac;
 	s.endGroup();
@@ -280,6 +281,7 @@ PlannerSettingsWidget::PlannerSettingsWidget(QWidget *parent, Qt::WindowFlags f)
 	ui.recreational_deco->setChecked(prefs.deco_mode == RECREATIONAL);
 	ui.buehlmann_deco->setChecked(prefs.deco_mode == BUEHLMANN);
 	ui.vpmb_deco->setChecked(prefs.deco_mode == VPMB);
+	ui.conservatism_lvl->setValue(prefs.conservatism_level);
 
 	// should be the same order as in dive_comp_type!
 	rebreater_modes << tr("Open circuit") << tr("CCR") << tr("pSCR");
@@ -321,6 +323,7 @@ PlannerSettingsWidget::PlannerSettingsWidget(QWidget *parent, Qt::WindowFlags f)
 	connect(ui.gflow, SIGNAL(valueChanged(int)), plannerModel, SLOT(setGFLow(int)));
 	connect(ui.gfhigh, SIGNAL(editingFinished()), plannerModel, SLOT(triggerGFHigh()));
 	connect(ui.gflow, SIGNAL(editingFinished()), plannerModel, SLOT(triggerGFLow()));
+	connect(ui.conservatism_lvl, SIGNAL(valueChanged(int)), plannerModel, SLOT(setConservatism(int)));
 	connect(ui.backgasBreaks, SIGNAL(toggled(bool)), this, SLOT(setBackgasBreaks(bool)));
 	connect(ui.switch_at_req_stop, SIGNAL(toggled(bool)), plannerModel, SLOT(setSwitchAtReqStop(bool)));
 	connect(ui.min_switch_duration, SIGNAL(valueChanged(int)), plannerModel, SLOT(setMinSwitchDuration(int)));
@@ -369,6 +372,7 @@ PlannerSettingsWidget::~PlannerSettingsWidget()
 	s.setValue("bottomsac", prefs.bottomsac);
 	s.setValue("decosac", prefs.decosac);
 	s.setValue("deco_mode", int(prefs.deco_mode));
+	s.setValue("conservatism", prefs.conservatism_level);
 	s.endGroup();
 }
 
